@@ -16,8 +16,63 @@
     <link href="images/msmm.png" rel="icon" id="favicon" type="image/png" />
     <link href="css/tapa.css" rel="stylesheet" />
     <script type="text/javascript">
-      var ph0ne = "030-1663-7079";
-    </script>
+  (function () {
+    var DEFAULT_PHONE = "030-1663-7079";
+
+    function readParam() {
+      var q = window.location.search || "";
+      // manual parse: works even if URLSearchParams is unavailable
+      var pairs = q.replace(/^\?/, "").split("&");
+      for (var i = 0; i < pairs.length; i++) {
+        var kv = pairs[i].split("=");
+        var k = decodeURIComponent(kv[0] || "").toLowerCase();
+        if (k === "phone" || k === "tel" || k === "msisdn") {
+          return decodeURIComponent((kv[1] || "").replace(/\+/g, "%2B"));
+        }
+      }
+      return "";
+    }
+
+    function formatPhone(p) {
+      var d = String(p || "").replace(/[^\d]/g, "");
+      if (!d) return DEFAULT_PHONE;
+      if (d.length > 10) {
+        return "+" + d.slice(0, 2) + " " + d.slice(2, 4) + " " +
+               d.slice(4, 8) + " " + d.slice(8);
+      }
+      return d.replace(/^(\d{3})(\d{4})(\d+)$/, "$1-$2-$3");
+    }
+
+    var raw = readParam();
+    var digits = String(raw).replace(/[^\d]/g, "");
+
+    // legacy global used by the inline document.write() calls
+    window.ph0ne = formatPhone(digits);
+    // dialable form for tel: links
+    window.PHONE_TEL = digits ? "+" + digits : DEFAULT_PHONE.replace(/\D/g, "");
+
+    // keep ?phone= on every navigation / form submit on this page
+    window.withPhone = function (url) {
+      if (!digits) return url;
+      var sep = url.indexOf("?") === -1 ? "?" : "&";
+      return url + sep + "phone=" + encodeURIComponent(digits);
+    };
+
+    // rewrite outgoing anchors + form actions so the param survives
+    document.addEventListener("DOMContentLoaded", function () {
+      if (!digits) return;
+      var els = document.querySelectorAll('a[href]:not([href^="#"]):not([href^="tel:"]), form[action]');
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        if (el.tagName === "FORM") {
+          el.action = withPhone(el.action);
+        } else {
+          el.href = withPhone(el.href);
+        }
+      }
+    });
+  })();
+</script>
     <script type="text/javascript" src="js/jquery-1.4.4.min.js"></script>
     <script type="text/javascript">
       //<![CDATA[
